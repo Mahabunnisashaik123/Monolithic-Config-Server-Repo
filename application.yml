@@ -1,0 +1,3 @@
+# Monolithic-Config-Server-Repo/application.yml
+global:
+  message: "This is a global config for all services"
