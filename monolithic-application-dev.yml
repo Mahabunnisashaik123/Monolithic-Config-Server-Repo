@@ -2,14 +2,16 @@
 # Path: Monolithic-Config-Server-Repo/monolithic-application-dev.yml
 
 server:
-  port: 8086 
+  port: 8086 # Your existing application port
 
 spring:
+  application:
+    name:  monolithic-application # Added for better identification in logs/metrics
   data:
     mongodb:
-      uri: mongodb://localhost:27017/productdb_monolith # MongoDB connection for products
+      uri: mongodb://localhost:27017/productdb_monolith # Your existing MongoDB connection for products
   datasource:
-    url: jdbc:mysql://localhost:3306/monolith_user_book_db?useSSL=false&serverTimezone=UTC # MySQL connection for users and books
+    url: jdbc:mysql://localhost:3306/monolith_user_book_db?useSSL=false&serverTimezone=UTC # Your existing MySQL connection for users and books
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -20,25 +22,27 @@ spring:
     properties:
       hibernate:
         format_sql: true
-  mail: # Default mail settings (can be overridden by Config Server)
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml # Your existing Liquibase config
+  mail: # Your existing mail settings
     host: smtp.gmail.com
     port: 587
-    username:mahebunnisashaik252@gmail.com # REPLACE WITH YOUR GMAIL EMAIL
-    password: eovrgpinxtaqlxax # REPLACE WITH YOUR GMAIL APP PASSWORD
+    username: mahebunnisashaik252@gmail.com # Your actual Gmail email
+    password: eovrgpinxtaqlxax # Your actual Gmail app password
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
-  thymeleaf:
+  thymeleaf: # Your existing Thymeleaf settings
     prefix: classpath:/templates/
     suffix: .html
     cache: false # Disable cache for development
 
-  # Spring Security JWT properties (if you decide to add security later, as it was previously excluded)
+  # Your existing Spring Security JWT properties
   jwt:
     secret: your_very_long_and_complex_jwt_secret_key_here_atleast_256bit_for_HS256 # IMPORTANT: Change this to a strong, random key
     expiration: 3600000 # 1 hour in milliseconds (e.g., for JWT token validity)
 
-# Eureka Client Configuration (monolith acts as a client)
+# Your existing Eureka Client Configuration
 eureka:
   client:
     service-url:
@@ -48,40 +52,70 @@ eureka:
   instance:
     prefer-ip-address: true # Prefer IP address over hostname in Eureka registration
 
-# Resilience4j Configuration (for potential external calls, or future microservices)
-resilience4j:
-  retry:
-    instances:
-      externalService: # Example instance, adjust as needed
-        maxAttempts: 3
-        waitDuration: 2s
-  circuitbreaker:
-    instances:
-      externalService: # Example instance, adjust as needed
-        slidingWindowSize: 5
-        failureRateThreshold: 50
-        waitDurationInOpenState: 10s
-        permittedNumberOfCallsInHalfOpenState: 2
+# MERGED Resilience4j Configuration (Detailed settings for productServiceCircuitBreaker, etc.)
+resilience4j.circuitbreaker:
+  instances:
+    productServiceCircuitBreaker: # This name is used in @CircuitBreaker annotation in UserService
+      registerHealthIndicator: true # Expose circuit breaker state via /actuator/health
+      slidingWindowType: COUNT_BASED # Use count-based window for measuring calls
+      slidingWindowSize: 10 # Number of calls in the sliding window
+      minimumNumberOfCalls: 5 # Minimum calls before calculating failure rate
+      failureRateThreshold: 50 # If 50% or more calls fail, open the circuit (in %)
+      waitDurationInOpenState: 5s # How long the circuit stays open before transitioning to HALF_OPEN
+      permittedNumberOfCallsInHalfOpenState: 3 # Number of calls allowed in HALF_OPEN to test recovery
+      automaticTransitionFromOpenToHalfOpenEnabled: true # Automatically transition to HALF_OPEN after waitDurationInOpenState
 
-# Micrometer Tracing (Zipkin)
+resilience4j.retry:
+  instances:
+    productServiceRetry: # This name is used in @Retry annotation in UserService
+      maxAttempts: 3 # Maximum number of retry attempts (1 original + 2 retries)
+      waitDuration: 1s # Initial wait duration between retries
+      enableExponentialBackoff: true # Increases wait duration exponentially
+      exponentialBackoffMultiplier: 2 # Multiplies wait duration by 2 for each retry
+      retryExceptions: # Exceptions that should trigger a retry
+        - org.springframework.web.client.ResourceAccessException
+        - java.util.concurrent.TimeoutException
+        - com.example.monolithic.product.exception.ProductServiceCallFailedException # Your custom exception
+
+resilience4j.timelimiter:
+  instances:
+    productServiceTimeLimiter: # This name is used in @TimeLimiter annotation in UserService
+      timeoutDuration: 2s # Maximum allowed execution time for the protected call
+
+# MERGED Micrometer Tracing (Zipkin) and Actuator Endpoints Configuration
 management:
-  tracing:
+  tracing: # Your existing tracing configuration
     enabled: true
     sampling:
       probability: 1.0 # Sample all traces
     propagation:
       type: b3 # B3 propagation format
-  zipkin:
+  zipkin: # Your existing Zipkin configuration
     tracing:
       endpoint: http://localhost:9411/api/v2/spans # Zipkin server endpoint
+  endpoints: # Added Actuator endpoint exposure
+    web:
+      exposure:
+        include: "*" # Expose all actuator endpoints (for development, be selective in production)
+  endpoint: # Added specific Actuator endpoint details
+    health:
+      show-details: always # Show full health details
+    metrics:
+      enabled: true # Enable metrics endpoint
+    circuitbreakers:
+      enabled: true # Enable circuitbreakers endpoint
+    retries:
+      enabled: true # Enable retries endpoint
+    timelimiters:
+      enabled: true # Enable timelimiters endpoint
 
-logging:
+logging: # Your existing logging configuration
   pattern:
     level: "%5p [${spring.application.name},%X{traceId:-},%X{spanId:-}] %logger{36} : %msg%n"
   level:
     com.example: INFO # Set logging level for your application packages
 
-# SpringDoc OpenAPI (Swagger UI) Configuration
+# Your existing SpringDoc OpenAPI (Swagger UI) Configuration
 springdoc:
   swagger-ui:
     path: /swagger-ui.html # Path for Swagger UI
@@ -91,5 +125,5 @@ springdoc:
   packages-to-scan: com.example.monolithic # Scan only your application packages for APIs
   show-actuator: true # Show Actuator endpoints in Swagger UI
 
-# Custom message for this profile
+# Your existing Custom message for this profile
 message: "Hello from Config Server for Monolithic Application (DEV Profile)"
