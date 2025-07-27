@@ -1,0 +1,95 @@
+# This file belongs in your Config Server's Git Repository
+# Path: config-server-repo/monolithic-application-dev.yml
+
+server:
+  port: 8086 # Default port for the monolithic application
+
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/productdb_monolith # MongoDB connection for products
+  datasource:
+    url: jdbc:mysql://localhost:3306/monolith_user_book_db?useSSL=false&serverTimezone=UTC # MySQL connection for users and books
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update # Automatically update schema (for development, use 'none' or 'validate' in production)
+    show-sql: true # Show SQL queries in logs
+    properties:
+      hibernate:
+        format_sql: true
+  mail: # Default mail settings (can be overridden by Config Server)
+    host: smtp.gmail.com
+    port: 587
+    username:mahebunnisashaik252@gmail.com # REPLACE WITH YOUR GMAIL EMAIL
+    password: eovrgpinxtaqlxax # REPLACE WITH YOUR GMAIL APP PASSWORD
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    cache: false # Disable cache for development
+
+  # Spring Security JWT properties (if you decide to add security later, as it was previously excluded)
+  jwt:
+    secret: your_very_long_and_complex_jwt_secret_key_here_atleast_256bit_for_HS256 # IMPORTANT: Change this to a strong, random key
+    expiration: 3600000 # 1 hour in milliseconds (e.g., for JWT token validity)
+
+# Eureka Client Configuration (monolith acts as a client)
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka # URL of your Eureka Server
+    register-with-eureka: true # Register this monolithic app with Eureka
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true # Prefer IP address over hostname in Eureka registration
+
+# Resilience4j Configuration (for potential external calls, or future microservices)
+resilience4j:
+  retry:
+    instances:
+      externalService: # Example instance, adjust as needed
+        maxAttempts: 3
+        waitDuration: 2s
+  circuitbreaker:
+    instances:
+      externalService: # Example instance, adjust as needed
+        slidingWindowSize: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 2
+
+# Micrometer Tracing (Zipkin)
+management:
+  tracing:
+    enabled: true
+    sampling:
+      probability: 1.0 # Sample all traces
+    propagation:
+      type: b3 # B3 propagation format
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans # Zipkin server endpoint
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name},%X{traceId:-},%X{spanId:-}] %logger{36} : %msg%n"
+  level:
+    com.example: INFO # Set logging level for your application packages
+
+# SpringDoc OpenAPI (Swagger UI) Configuration
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html # Path for Swagger UI
+  api-docs:
+    path: /v3/api-docs # Path for OpenAPI JSON
+  default-produces-media-type: application/json # Default response type
+  packages-to-scan: com.example.monolithic # Scan only your application packages for APIs
+  show-actuator: true # Show Actuator endpoints in Swagger UI
+
+# Custom message for this profile
+message: "Hello from Config Server for Monolithic Application (DEV Profile)"
