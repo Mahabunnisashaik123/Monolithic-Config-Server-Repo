@@ -1,8 +1,8 @@
 # This file belongs in your Config Server's Git Repository
-# Path: config-server-repo/monolithic-application-dev.yml
+# Path: Monolithic-Config-Server-Repo/monolithic-application-dev.yml
 
 server:
-  port: 8086 # Default port for the monolithic application
+  port: 8086 
 
 spring:
   data:
